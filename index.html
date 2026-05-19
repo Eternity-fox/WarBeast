@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战争巨兽成就代打数据面板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        /* 强制身体和HTML铺满一屏，禁止全局滚动 */
+        html, body {
+            height: 100vh;
+            overflow: hidden;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f6f8fa;
+            color: #24292f;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.4;
+        }
+        /* 顶部面板：压缩为极致单行 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+            flex-shrink: 0; /* 防止被压缩 */
+            position: relative;
+        }
+        header::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, #007cf0, #00dfd8);
+        }
+        header h1 {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        header p {
+            color: #9ca3af;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        /* 三栏大容器：撑满剩余屏幕高度 */
+        .container {
+            display: flex;
+            gap: 15px;
+            max-width: 1650px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            min-height: 0; /* 关键：允许子元素在 flex 容器中正常缩放和产生滚动条 */
+        }
+        /* 通用面板高级卡片样式 */
+        .panel {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.01);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eef1f6;
+            height: 100%; /* 撑满容器 */
+            min-height: 0; /* 允许内部容器缩放 */
+        }
+        .panel h2 {
+            font-size: 14px;
+            color: #1f2937;
+            font-weight: 700;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .panel h2::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 14px;
+            background: #007cf0;
+            border-radius: 2px;
+        }
+        /* 左边：总进度 (内部无需滚动，高度高度压缩) */
+        .left-panel {
+            flex: 1;
+            min-width: 280px;
+        }
+        .progress-card {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .progress-title {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #334155;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-bar-container {
+            background: #e2e8f0;
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #007cf0 0%, #00dfd8 100%);
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .progress-text {
+            font-size: 11px;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .progress-text .num-highlight {
+            color: #007cf0;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        /* 中间：今日新增 + 历史明细组合 */
+        .middle-panel {
+            flex: 1.2;
+            min-width: 340px;
+            gap: 12px;
+        }
+        .sub-section.today {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            padding: 12px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .sub-section.today h3 {
+            font-size: 13px;
+            color: #0369a1;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .sub-section.history {
+            flex: 1;
+            min-height: 0; /* 允许内部列表计算高度并滚动 */
+            display: flex;
+            flex-direction: column;
+        }
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        /* 滚动条奢华美化 */
+        .list-container::-webkit-scrollbar, .screenshot-area::-webkit-scrollbar {
+            width: 5px;
+        }
+        .list-container::-webkit-scrollbar-thumb, .screenshot-area::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .day-row {
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .day-date {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+            font-size: 12px;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 4px;
+        }
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            font-size: 11px;
+        }
+        .grid-item {
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #f1f5f9;
+        }
+        .grid-item.has-data {
+            background: #fff9db;
+            border-color: #fff3bf;
+        }
+        .count-add {
+            color: #64748b;
+            font-weight: 700;
+        }
+        .count-add.positive {
+            color: #ea580c;
+        }
+        /* 右边：战绩截图 */
+        .right-panel {
+            flex: 1.6;
+            min-width: 420px;
+        }
+        .date-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .date-btn {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 6px 2px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .date-btn:hover {
+            color: #007cf0;
+            border-color: #007cf0;
+            background: #f0f9ff;
+        }
+        .date-btn.active {
+            background: #007cf0;
+            color: #ffffff;
+            border-color: #007cf0;
+            box-shadow: 0 2px 6px rgba(0, 124, 240, 0.15);
+        }
+        .screenshot-area {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            background: #f8fafc;
+            min-height: 0; /* 允许截图区域自适应缩减触发内部滚动 */
+        }
+        .time-section {
+            margin-bottom: 14px;
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .time-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 8px;
+            padding-left: 6px;
+            border-left: 3px solid #007cf0;
+        }
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+        }
+        .img-wrapper {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background: #f1f5f9;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .img-wrapper:hover {
+            border-color: #007cf0;
+            transform: scale(1.02);
+        }
+        .img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .img-wrapper span {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(15, 23, 42, 0.7);
+            color: #fff;
+            font-size: 9px;
+            text-align: center;
+            padding: 2px 0;
+        }
+        /* 大图预览弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+        .modal img {
+            max-width: 94%;
+            max-height: 94%;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .modal-close {
+            position: absolute;
+            top: 25px; right: 35px;
+            color: #94a3b8; font-size: 42px; cursor: pointer;
+        }
+        .modal-close:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>战争巨兽成就代打数据面板</h1>
+        <p>2026.5.19 ~ 2026.6.2</p>
+    </header>
+
+    <div class="container">
+        <div class="panel left-panel">
+            <h2>总进度</h2>
+            <div id="total-progress-container">
+                </div>
+        </div>
+
+        <div class="panel middle-panel">
+            <div class="sub-section today">
+                <h3 id="today-title">⚡ 今日新增概览</h3>
+                <div class="day-grid" id="today-increment-grid">
+                    </div>
+            </div>
+            
+            <div class="sub-section history">
+                <h2>每日新增明细</h2>
+                <div class="list-container" id="daily-increment-container">
+                    </div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <h2>战绩截图查询</h2>
+            <div class="date-selector" id="date-buttons">
+                </div>
+            <div class="screenshot-area" id="screenshot-display">
+                <p style="color:#94a3b8; text-align:center; margin-top:50px; font-size:12px;">请点击上方日期查看当天截图</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="imgModal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img id="modalImg" src="" alt="大图预览">
+    </div>
+
+    <script>
+        const TARGET = 100;
+        const AC_NAMES = ['绝对主坦', '空中霸主', '战场飞车', '禁飞区'];
+        const START_DATE = new Date('2026-05-19');
+        const END_DATE = new Date('2026-06-02');
+        
+        const realCurrentDate = new Date();
+        const todayStr = `${realCurrentDate.getMonth() + 1}.${realCurrentDate.getDate()}`;
+        
+        let historyData = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchRecords();
+        });
+
+        function fetchRecords() {
+            fetch('records.txt')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('未找到 records.txt 文件，请确认它与本网页在同一文件夹下，且通过本地服务器运行。');
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    parseData(text);
+                    renderTotalProgress();
+                    renderTodaySection();
+                    renderDailyIncrements();
+                    generateDateButtons();
+                })
+                .catch(err => {
+                    alert(err.message);
+                });
+        }
+
+        function parseData(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            let parsed = [];
+
+            for (let i = 0; i < lines.length; i += 2) {
+                if (lines[i] && lines[i+1]) {
+                    const date = lines[i];
+                    const data = lines[i+1].split('/').map(Number);
+                    parsed.push({ date, data, dailyAdd: [0, 0, 0, 0] });
+                }
+            }
+
+            // 日期正序：从小到大
+            parsed.sort((a, b) => {
+                const [aM, aD] = a.date.split('.').map(Number);
+                const [bM, bD] = b.date.split('.').map(Number);
+                return aM === bM ? aD - bD : aM - bM;
+            });
+
+            // 动态计算每日净增
+            for (let i = 0; i < parsed.length; i++) {
+                if (i === 0) {
+                    parsed[i].dailyAdd = [...parsed[i].data];
+                } else {
+                    parsed[i].dailyAdd = parsed[i].data.map((val, idx) => {
+                        const diff = val - parsed[i-1].data[idx];
+                        return diff > 0 ? diff : 0;
+                    });
+                }
+            }
+            historyData = parsed;
+        }
+
+        function renderTotalProgress() {
+            const container = document.getElementById('total-progress-container');
+            if (historyData.length === 0) return;
+
+            let latestRecord = [0, 0, 0, 0];
+            for(let i = historyData.length - 1; i >= 0; i--) {
+                if(historyData[i].data.some(val => val > 0)) {
+                    latestRecord = historyData[i].data;
+                    break;
+                }
+            }
+
+            let html = '';
+            AC_NAMES.forEach((name, idx) => {
+                const current = latestRecord[idx] || 0;
+                const percent = Math.min(((current / TARGET) * 100), 100).toFixed(1);
+                html += `
+                    <div class="progress-card">
+                        <div class="progress-title">
+                            <span>${name}</span>
+                            <span style="font-size:10px; color:#94a3b8;">🎯 目标 ${TARGET}</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span>已完成 ${percent}%</span>
+                            <span><span class="num-highlight">${current}</span> / ${TARGET}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderTodaySection() {
+            const titleEl = document.getElementById('today-title');
+            const gridEl = document.getElementById('today-increment-grid');
+            
+            let todayData = historyData.find(item => item.date === todayStr);
+            let activeDisplayDate = todayStr;
+
+            if (!todayData) {
+                let found = [...historyData].reverse().find(item => item.data.some(v => v > 0));
+                todayData = found || historyData[0];
+                activeDisplayDate = todayData.date;
+            }
+
+            titleEl.innerHTML = `⚡ 今日新增概览 (${activeDisplayDate})`;
+
+            let html = '';
+            AC_NAMES.forEach((name, idx) => {
+                const addVal = todayData.dailyAdd[idx];
+                const activeClass = addVal > 0 ? 'has-data' : '';
+                const colorClass = addVal > 0 ? 'positive' : '';
+                html += `
+                    <div class="grid-item ${activeClass}">
+                        <span style="color: #475569; font-weight:600;">${name}</span>
+                        <span class="count-add ${colorClass}" style="font-size:14px;">+${addVal}</span>
+                    </div>
+                `;
+            });
+            gridEl.innerHTML = html;
+        }
+
+        function renderDailyIncrements() {
+            const container = document.getElementById('daily-increment-container');
+            let html = '';
+            
+            // 维持从小到大的历史排序
+            const displayData = historyData;
+
+            displayData.forEach(day => {
+                html += `
+                    <div class="day-row">
+                        <div class="day-date">📅 2026年${day.date.replace('.', '月')}日</div>
+                        <div class="day-grid">
+                `;
+                AC_NAMES.forEach((name, idx) => {
+                    const addVal = day.dailyAdd[idx];
+                    const colorClass = addVal > 0 ? 'positive' : '';
+                    html += `
+                        <div class="grid-item">
+                            <span>${name}</span>
+                            <span class="count-add ${colorClass}">+${addVal}</span>
+                        </div>
+                    `;
+                });
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function generateDateButtons() {
+            const btnContainer = document.getElementById('date-buttons');
+            let html = '';
+            
+            let current = new Date(START_DATE);
+            while (current <= END_DATE) {
+                const month = current.getMonth() + 1;
+                const date = current.getDate();
+                const dateStr = `${month}.${date}`;
+                
+                html += `<button class="date-btn" id="btn-${dateStr}" onclick="showScreenshots('${dateStr}', this)">${dateStr}</button>`;
+                current.setDate(current.getDate() + 1);
+            }
+            btnContainer.innerHTML = html;
+
+            let todayBtn = document.getElementById(`btn-${todayStr}`);
+            if(!todayBtn) {
+                let lastActiveDay = [...historyData].reverse().find(item => item.data.some(v => v > 0));
+                todayBtn = document.getElementById(`btn-${lastActiveDay ? lastActiveDay.date : '5.19'}`);
+            }
+            if(todayBtn) todayBtn.click();
+        }
+
+        function showScreenshots(dateStr, btnElement) {
+            document.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+
+            const displayArea = document.getElementById('screenshot-display');
+            const maxPicsPerPeriod = 5; 
+            
+            let html = `<h3 style="margin-bottom:12px; color:#1e293b; font-size:13px; font-weight:700;">🖼️ 2026.${dateStr} 战绩凭证</h3>`;
+            
+            html += `
+                <div class="time-section">
+                    <div class="time-title">☀️ 上午明细 (a)</div>
+                    <div class="img-grid" id="am-grid">
+            `;
+            for(let i=1; i<=maxPicsPerPeriod; i++) {
+                const imgName = `2026.${dateStr}.a.${i}.jpg`;
+                const imgSrc = `screenshot/${imgName}`;
+                html += `
+                    <div class="img-wrapper" id="wrap-am-${i}" style="display:inline-block;">
+                        <img src="${imgSrc}" onerror="document.getElementById('wrap-am-${i}').style.display='none'" onclick="openModal('${imgSrc}')">
+                        <span>截图 ${i}</span>
+                    </div>
+                `;
+            }
+            html += `</div></div>`;
+
+            html += `
+                <div class="time-section">
+                    <div class="time-title">🌙 下午明细 (b)</div>
+                    <div class="img-grid" id="pm-grid">
+            `;
+            for(let i=1; i<=maxPicsPerPeriod; i++) {
+                const imgName = `2026.${dateStr}.b.${i}.jpg`;
+                const imgSrc = `screenshot/${imgName}`;
+                html += `
+                    <div class="img-wrapper" id="wrap-pm-${i}" style="display:inline-block;">
+                        <img src="${imgSrc}" onerror="document.getElementById('wrap-pm-${i}').style.display='none'" onclick="openModal('${imgSrc}')">
+                        <span>截图 ${i}</span>
+                    </div>
+                `;
+            }
+            html += `</div></div>`;
+
+            displayArea.innerHTML = html;
+        }
+
+        function openModal(src) {
+            document.getElementById('imgModal').style.display = 'flex';
+            document.getElementById('modalImg').src = src;
+        }
+        function closeModal() {
+            document.getElementById('imgModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
