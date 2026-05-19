@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>战争巨兽成就 代打数据面板</title>
+    <title>战争巨兽成就代打数据面板</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        /* 强制身体和HTML铺满一屏，禁止全局滚动 */
+        /* 默认电脑端：强制身体和HTML铺满一屏，禁止全局滚动 */
         html, body {
             height: 100vh;
             overflow: hidden;
@@ -34,7 +34,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             margin-bottom: 15px;
-            flex-shrink: 0; /* 防止被压缩 */
+            flex-shrink: 0;
             position: relative;
         }
         header::after {
@@ -63,7 +63,7 @@
             margin: 0 auto;
             width: 100%;
             flex: 1;
-            min-height: 0; /* 关键：允许子元素在 flex 容器中正常缩放和产生滚动条 */
+            min-height: 0;
         }
         /* 通用面板高级卡片样式 */
         .panel {
@@ -74,8 +74,8 @@
             display: flex;
             flex-direction: column;
             border: 1px solid #eef1f6;
-            height: 100%; /* 撑满容器 */
-            min-height: 0; /* 允许内部容器缩放 */
+            height: 100%;
+            min-height: 0;
         }
         .panel h2 {
             font-size: 14px;
@@ -97,11 +97,11 @@
             background: #007cf0;
             border-radius: 2px;
         }
-        /* 左边：总进度 (内部无需滚动，高度高度压缩) */
-        .left-panel {
-            flex: 1;
-            min-width: 280px;
-        }
+        /* 电脑端各面板默认弹性比例 */
+        .left-panel { flex: 1; min-width: 280px; order: 1; }
+        .middle-panel { flex: 1.2; min-width: 340px; display: flex; flex-direction: column; gap: 12px; order: 2; }
+        .right-panel { flex: 1.6; min-width: 420px; order: 3; }
+
         .progress-card {
             background: #f8fafc;
             border: 1px solid #f1f5f9;
@@ -143,12 +143,7 @@
             font-weight: 700;
             font-size: 13px;
         }
-        /* 中间：今日新增 + 历史明细组合 */
-        .middle-panel {
-            flex: 1.2;
-            min-width: 340px;
-            gap: 12px;
-        }
+        
         .sub-section.today {
             background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
             border: 1px solid #bae6fd;
@@ -164,7 +159,7 @@
         }
         .sub-section.history {
             flex: 1;
-            min-height: 0; /* 允许内部列表计算高度并滚动 */
+            min-height: 0;
             display: flex;
             flex-direction: column;
         }
@@ -173,7 +168,7 @@
             overflow-y: auto;
             padding-right: 4px;
         }
-        /* 滚动条奢华美化 */
+        /* 滚动条美化 */
         .list-container::-webkit-scrollbar, .screenshot-area::-webkit-scrollbar {
             width: 5px;
         }
@@ -222,11 +217,7 @@
         .count-add.positive {
             color: #ea580c;
         }
-        /* 右边：战绩截图 */
-        .right-panel {
-            flex: 1.6;
-            min-width: 420px;
-        }
+        
         .date-selector {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -264,7 +255,7 @@
             border-radius: 8px;
             padding: 12px;
             background: #f8fafc;
-            min-height: 0; /* 允许截图区域自适应缩减触发内部滚动 */
+            min-height: 0;
         }
         .time-section {
             margin-bottom: 14px;
@@ -314,6 +305,7 @@
             text-align: center;
             padding: 2px 0;
         }
+        
         /* 大图预览弹窗 */
         .modal {
             display: none;
@@ -337,6 +329,96 @@
             color: #94a3b8; font-size: 42px; cursor: pointer;
         }
         .modal-close:hover { color: #fff; }
+
+        /* ==========================================================================
+           ⚡ 核心修改：手机端/窄屏媒体查询优化 (响应式断点 768px)
+           ========================================================================== */
+        @media (max-width: 768px) {
+            /* 解除全局高度锁定，允许网页上下自然滚动 */
+            html, body {
+                height: auto;
+                overflow: auto;
+            }
+            body {
+                padding: 10px;
+            }
+            
+            /* 顶部标题改为紧凑版上下排列 */
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+                padding: 12px 16px;
+                margin-bottom: 12px;
+            }
+            header h1 { font-size: 16px; }
+            header p { font-size: 11px; }
+
+            /* 容器转为单列纵向布局 */
+            .container {
+                flex-direction: column;
+                gap: 12px;
+                height: auto;
+            }
+
+            /* 卡片自适应高度，解除限制 */
+            .panel {
+                height: auto;
+                min-height: initial;
+                padding: 14px;
+            }
+
+            /* 🎯 关键：通过 CSS order 属性重排手机端显示顺序 */
+            .left-panel { 
+                order: 1; /* 1. 总进度 */
+                min-width: 100%; 
+            }
+            .mobile-today-wrapper { 
+                order: 2; /* 2. 今日新增 */
+            }
+            .right-panel { 
+                order: 3; /* 3. 战绩截图 */
+                min-width: 100%; 
+            }
+            .mobile-history-wrapper { 
+                order: 4; /* 4. 每日详细 */
+            }
+
+            /* 针对移动端拆分原 middle-panel 的内部块，使其能各自独立参与重排 */
+            .middle-panel {
+                display: contents; /* 释放父容器，让子元素直接受 container 排序控制 */
+            }
+
+            /* 内部滚动区在手机端全部展开，靠网页全局滚动，体验更佳 */
+            .list-container, .screenshot-area {
+                overflow-y: visible;
+                height: auto;
+                min-height: initial;
+                padding-right: 0;
+            }
+            .screenshot-area {
+                background: #ffffff;
+                border: none;
+                padding: 0;
+                margin-top: 10px;
+            }
+
+            /* 手机端日期按钮调大，更方便大拇指点击 */
+            .date-selector {
+                grid-template-columns: repeat(4, 1fr); /* 改为4列，按钮更宽一点 */
+                gap: 6px;
+            }
+            .date-btn {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+
+            /* 手机端截图宫格适当放大 */
+            .img-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -349,30 +431,26 @@
     <div class="container">
         <div class="panel left-panel">
             <h2>总进度</h2>
-            <div id="total-progress-container">
-                </div>
+            <div id="total-progress-container"></div>
         </div>
 
-        <div class="panel middle-panel">
-            <div class="sub-section today">
+        <div class="middle-panel">
+            <div class="sub-section today mobile-today-wrapper">
                 <h3 id="today-title">⚡ 今日新增概览</h3>
-                <div class="day-grid" id="today-increment-grid">
-                    </div>
+                <div class="day-grid" id="today-increment-grid"></div>
             </div>
             
-            <div class="sub-section history">
+            <div class="panel sub-section history mobile-history-wrapper">
                 <h2>每日新增明细</h2>
-                <div class="list-container" id="daily-increment-container">
-                    </div>
+                <div class="list-container" id="daily-increment-container"></div>
             </div>
         </div>
 
         <div class="panel right-panel">
             <h2>战绩截图查询</h2>
-            <div class="date-selector" id="date-buttons">
-                </div>
+            <div class="date-selector" id="date-buttons"></div>
             <div class="screenshot-area" id="screenshot-display">
-                <p style="color:#94a3b8; text-align:center; margin-top:50px; font-size:12px;">请点击上方日期查看当天截图</p>
+                <p style="color:#94a3b8; text-align:center; margin-top:30px; font-size:12px;">请点击上方日期查看当天截图</p>
             </div>
         </div>
     </div>
@@ -429,14 +507,12 @@
                 }
             }
 
-            // 日期正序：从小到大
             parsed.sort((a, b) => {
                 const [aM, aD] = a.date.split('.').map(Number);
                 const [bM, bD] = b.date.split('.').map(Number);
                 return aM === bM ? aD - bD : aM - bM;
             });
 
-            // 动态计算每日净增
             for (let i = 0; i < parsed.length; i++) {
                 if (i === 0) {
                     parsed[i].dailyAdd = [...parsed[i].data];
@@ -519,7 +595,6 @@
             const container = document.getElementById('daily-increment-container');
             let html = '';
             
-            // 维持从小到大的历史排序
             const displayData = historyData;
 
             displayData.forEach(day => {
